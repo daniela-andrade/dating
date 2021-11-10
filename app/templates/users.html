@@ -1,0 +1,42 @@
+
+{% extends 'base.html' %}
+<style>
+    table {
+      font-family: arial, sans-serif;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    
+    td, th {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #dddddd;
+    }
+</style>
+
+{% block content %}
+{% for message in get_flashed_messages() %}
+<h2>{{ message }}</h2>
+{% endfor %}
+    <h1>{% block title %} Users {% endblock %}</h1>
+    <div>
+        <table>
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Country</th>
+            </tr>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.country }}</td>
+            </tr>
+            {% endfor %}
+        </table> 
+    </div>
+{% endblock %}

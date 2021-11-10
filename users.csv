@@ -1,0 +1,5 @@
+username,email,country,password_hash
+Alice, alice@gmail.com, PT, 1234
+Doot, doot@gmail.com, NT, 1123
+Ana, ana@gmail.com, US, 1112
+Mary, mary@gmail.com, FR, 1111
