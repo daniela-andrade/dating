@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% for message in get_flashed_messages() %}
+<h2>{{ message }}</h2>
+{% endfor %}
+    <h1>{% block title %} My Likes {% endblock %}</h1>
+    <div style="margin: 20px">
+        <table>
+            <tr>
+              <th>Liked Id</th>
+              <th>Is Platonic?</th>
+              <th>Is Romantic?</th>
+            </tr>
+            {% for like in likes %}
+            <tr>
+                <td>{{ like.liked_id }}</td>
+                <td>{{ like.is_platonic }}</td>
+                <td>{{ like.is_romantic }}</td>
+            </tr>
+            {% endfor %}
+        </table> 
+    </div>
+      <div style="margin: 20px">
+      <a href="{{ url_for('add_platonic_likes') }}">Add Platonic Likes</a>
+    </div>
+    <div style="margin: 20px">
+      <a href="{{ url_for('add_romantic_likes') }}">Add Romantic Likes</a>
+    </div>
+{% endblock %}

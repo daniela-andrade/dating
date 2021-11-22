@@ -2,8 +2,8 @@ from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.urls import url_parse
 from app import app, db
-from app.forms import LoginForm, RegistrationForm
-from app.models import User
+from app.forms import LikeForm, LoginForm, RegistrationForm
+from app.models import User, Like
 
 
 @app.route('/')
@@ -11,6 +11,7 @@ from app.models import User
 @login_required
 def index():
     return render_template('index.html', title='Home')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -61,3 +62,64 @@ def show_users():
     else:
         return render_template('users.html', title='Users', users=users)
     return render_template('base.html', title='Home')
+
+
+@app.route("/likes/")
+def likes():
+    likes = Like.query.filter(
+        Like.liker_id == current_user.id)
+    return render_template('likes.html', likes=likes)
+
+
+@app.route("/platonic", methods=["GET", "POST"])
+@login_required
+def add_platonic_likes():
+    form = LikeForm()
+    likes = Like.query.filter(
+        Like.liker_id == current_user.id).filter(Like.is_platonic == False)
+    users = User.query.filter(User.username != current_user.username).all()
+
+    form.choices.choices = [(u.id, u.username) for u in users]
+
+    if request.method == 'POST' and form.validate_on_submit():
+        for id in form.choices.data:
+            l = Like.query.filter(Like.liker_id == current_user.id).filter(
+                Like.liked_id == id).first()
+            if l and l.is_romantic:
+                l.is_platonic = True
+            else:
+                l = Like(liker_id=current_user.id,
+                         liked_id=id, is_platonic=True)
+                db.session.add(l)
+            db.session.commit()
+        return redirect(url_for('likes'))
+    else:
+        form.choices.data = [(u.id, u.username, u.country) for u in users]
+        return render_template('addLikes.html', title='Platonic', form=form)
+
+
+@app.route("/romantic", methods=["GET", "POST"])
+@login_required
+def add_romantic_likes():
+    form = LikeForm()
+    likes = Like.query.filter(
+        Like.liker_id == current_user.id).filter(Like.is_romantic == False)
+    users = User.query.filter(User.username != current_user.username).all()
+    form.choices.choices = [(u.id, u.username) for u in users]
+
+    if request.method == 'POST' and form.validate_on_submit():
+        accepted = []
+        for id in form.choices.data:
+            l = Like.query.filter(Like.liker_id == current_user.id).filter(
+                Like.liked_id == id).first()
+            if l and l.is_platonic:
+                l.is_romantic = True
+            else:
+                l = Like(liker_id=current_user.id,
+                         liked_id=id, is_romantic=True)
+                db.session.add(l)
+            db.session.commit()
+        return redirect(url_for('likes'))
+    else:
+        form.choices.data = [(u.id, u.username, u.country) for u in users]
+        return render_template('addLikes.html', title='Romantic', form=form)
