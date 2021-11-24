@@ -1,0 +1,48 @@
+{% extends 'base.html' %} {% block content %} {% for message in
+get_flashed_messages() %}
+<h2>{{ message }}</h2>
+{% endfor %}
+<h1>{% block title %} My Likes {{title}} {% endblock %}</h1>
+<div style="margin: 20px">
+  <table>
+    <tr>
+      <th>User</th>
+      <th>Country</th>
+    </tr>
+    {% for like in likes %}
+    <tr>
+      <td>{{ like.username }}</td>
+      <td>{{ like.country }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+<h1>My Loves {{title}}</h1>
+<div style="margin: 20px">
+  <table>
+    <tr>
+      <th>User</th>
+      <th>Country</th>
+    </tr>
+    {% for love in loves %}
+    <tr>
+      <td>{{ love.username }}</td>
+      <td>{{ love.country }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% if title == 'Sent' %}
+<div style="margin: 20px">
+  <a href="{{ url_for('like') }}">Add Platonic Likes</a>
+</div>
+<div style="margin: 20px">
+  <a href="{{ url_for('unlike') }}">Remove Platonic Likes</a>
+</div>
+<div style="margin: 20px">
+  <a href="{{ url_for('love') }}">Add Romantic Likes</a>
+</div>
+<div style="margin: 20px">
+  <a href="{{ url_for('unlove') }}">Remove Romantic Likes</a>
+</div>
+{% endif %} {% endblock %}

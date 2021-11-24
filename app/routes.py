@@ -1,9 +1,10 @@
 from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.urls import url_parse
-from app import app, db
-from app.forms import LikeForm, LoginForm, RegistrationForm
-from app.models import User, Like
+from app import app
+from app.models import User
+from app.db import db
+from .forms import LikeForm, LoginForm, RegistrationForm
 
 
 @app.route('/')
@@ -17,17 +18,22 @@ def index():
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
+
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
+        user = db.get_user_by_username(form.username.data)
         if user is None or not user.check_password(form.password.data):
             flash('Invalid username or password')
             return redirect(url_for('login'))
+
         login_user(user, remember=form.remember_me.data)
+        # used to redirect user to the page they wanted to view
+        # before they were prompted with the login form
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
             next_page = url_for('index')
         return redirect(next_page)
+
     return render_template('login.html', title='Sign In', form=form)
 
 
@@ -47,8 +53,7 @@ def register():
                     email=form.email.data,
                     country=form.country.data)
         user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
+        db.register(user)
         flash('Congratulations, you are now a registered user!')
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
@@ -56,7 +61,7 @@ def register():
 
 @app.route("/users/")
 def show_users():
-    users = User.query.all()
+    users = db.get_all_other_users(current_user)
     if users == None:
         flash('Error fetching users')
     else:
@@ -64,62 +69,86 @@ def show_users():
     return render_template('base.html', title='Home')
 
 
-@app.route("/likes/")
-def likes():
-    likes = Like.query.filter(
-        Like.liker_id == current_user.id)
-    return render_template('likes.html', likes=likes)
+@app.route("/likes_and_loves_sent/")
+def likes_and_loves_sent():
+    likes = db.get_likes_sent(current_user)
+    loves = db.get_loves_sent(current_user)
+    return render_template('likesAndLoves.html', title='Sent', likes=likes, loves=loves)
 
 
-@app.route("/platonic", methods=["GET", "POST"])
+@app.route("/likes_and_loves_received/")
+def likes_and_loves_received():
+    likes = db.get_likes_received(current_user)
+    loves = db.get_loves_received(current_user)
+    return render_template('likesAndLoves.html', title='Received', likes=likes, loves=loves)
+
+
+@app.route("/like", methods=["GET", "POST"])
 @login_required
-def add_platonic_likes():
+def like():
     form = LikeForm()
-    likes = Like.query.filter(
-        Like.liker_id == current_user.id).filter(Like.is_platonic == False)
-    users = User.query.filter(User.username != current_user.username).all()
+    users_not_liked = db.get_users_not_liked(current_user)
+    for u in users_not_liked:
+        print(f'User not liked: {u}')
 
-    form.choices.choices = [(u.id, u.username) for u in users]
+    form.choices.choices = [(u.id, u.username) for u in users_not_liked]
 
     if request.method == 'POST' and form.validate_on_submit():
         for id in form.choices.data:
-            l = Like.query.filter(Like.liker_id == current_user.id).filter(
-                Like.liked_id == id).first()
-            if l and l.is_romantic:
-                l.is_platonic = True
-            else:
-                l = Like(liker_id=current_user.id,
-                         liked_id=id, is_platonic=True)
-                db.session.add(l)
-            db.session.commit()
-        return redirect(url_for('likes'))
+            db.like(current_user, id)
+        return redirect(url_for('likes_and_loves_sent'))
     else:
-        form.choices.data = [(u.id, u.username, u.country) for u in users]
-        return render_template('addLikes.html', title='Platonic', form=form)
+        form.choices.data = [(u.id, u.username, u.country)
+                             for u in users_not_liked]
+        return render_template('likeAndLove.html', title='Add Platonic Likes', form=form)
 
 
-@app.route("/romantic", methods=["GET", "POST"])
+@app.route("/love", methods=["GET", "POST"])
 @login_required
-def add_romantic_likes():
+def love():
     form = LikeForm()
-    likes = Like.query.filter(
-        Like.liker_id == current_user.id).filter(Like.is_romantic == False)
-    users = User.query.filter(User.username != current_user.username).all()
-    form.choices.choices = [(u.id, u.username) for u in users]
+    users_not_loved = db.get_users_not_loved(current_user)
+    form.choices.choices = [(u.id, u.username) for u in users_not_loved]
 
     if request.method == 'POST' and form.validate_on_submit():
-        accepted = []
         for id in form.choices.data:
-            l = Like.query.filter(Like.liker_id == current_user.id).filter(
-                Like.liked_id == id).first()
-            if l and l.is_platonic:
-                l.is_romantic = True
-            else:
-                l = Like(liker_id=current_user.id,
-                         liked_id=id, is_romantic=True)
-                db.session.add(l)
-            db.session.commit()
-        return redirect(url_for('likes'))
+            db.love(current_user, id)
+        return redirect(url_for('likes_and_loves_sent'))
     else:
-        form.choices.data = [(u.id, u.username, u.country) for u in users]
-        return render_template('addLikes.html', title='Romantic', form=form)
+        form.choices.data = [(u.id, u.username, u.country)
+                             for u in users_not_loved]
+        return render_template('likeAndLove.html', title='Add Romantic Likes', form=form)
+
+
+@app.route("/unlike", methods=["GET", "POST"])
+@login_required
+def unlike():
+    form = LikeForm()
+    users_liked = db.get_likes_sent(current_user)
+    form.choices.choices = [(u.id, u.username) for u in users_liked]
+
+    if request.method == 'POST' and form.validate_on_submit():
+        for id in form.choices.data:
+            db.unlike(current_user, id)
+        return redirect(url_for('likes_and_loves_sent'))
+    else:
+        form.choices.data = [(u.id, u.username, u.country)
+                             for u in users_liked]
+        return render_template('likeAndLove.html', title='Remove Platonic Likes', form=form)
+
+
+@app.route("/unlove", methods=["GET", "POST"])
+@login_required
+def unlove():
+    form = LikeForm()
+    users_loved = db.get_loves_sent(current_user)
+    form.choices.choices = [(u.id, u.username) for u in users_loved]
+
+    if request.method == 'POST' and form.validate_on_submit():
+        for id in form.choices.data:
+            db.unlove(current_user, id)
+        return redirect(url_for('likes_and_loves_sent'))
+    else:
+        form.choices.data = [(u.id, u.username, u.country)
+                             for u in users_loved]
+        return render_template('likeAndLove.html', title='Remove Platonic Likes', form=form)

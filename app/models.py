@@ -1,18 +1,52 @@
-from app import db, login
+from app import login
+from app.db.setup import Base
+from sqlalchemy import Column, Integer, String, Table, ForeignKey
+from sqlalchemy.orm import relationship, backref
+from sqlalchemy.ext.associationproxy import association_proxy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), index=True, unique=True)
-    email = db.Column(db.String(120), index=True, unique=True)
-    country = db.Column(db.String(64))
-    password_hash = db.Column(db.String(128))
-    likes_sent = db.relationship("Like", foreign_keys='like.c.liker_id',
-                                 backref='liker', lazy='dynamic')
-    likes_received = db.relationship("Like", foreign_keys='like.c.liked_id',
-                                     backref='liked', lazy='dynamic')
+liker_liked = Table(
+    'like',
+    Base.metadata,
+    Column('liker_id', Integer, ForeignKey('user.id')),
+    Column('liked_id', Integer, ForeignKey('user.id')),
+)
+
+lover_loved = Table(
+    'love',
+    Base.metadata,
+    Column('lover_id', Integer, ForeignKey('user.id')),
+    Column('loved_id', Integer, ForeignKey('user.id')),
+)
+
+
+class User(UserMixin, Base):
+
+    __tablename__ = "user"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String(64), index=True, unique=True)
+    email = Column(String(120), index=True, unique=True)
+    country = Column(String(64))
+    password_hash = Column(String(128))
+    likes_sent = relationship(
+        'User',
+        secondary=liker_liked,
+        primaryjoin=(liker_liked.c.liker_id == id),
+        secondaryjoin=(liker_liked.c.liked_id == id),
+        backref=backref('likes_received', lazy='dynamic'),
+        lazy='dynamic'
+    )
+    loves_sent = relationship(
+        'User',
+        secondary=lover_loved,
+        primaryjoin=(lover_loved.c.lover_id == id),
+        secondaryjoin=(lover_loved.c.loved_id == id),
+        backref=backref('loves_received', lazy='dynamic'),
+        lazy='dynamic'
+    )
 
     def __repr__(self):
         return '<User {}>'.format(self.username)
@@ -23,19 +57,19 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def like(self, user):
+        self.likes_sent.append(user)
 
-@login.user_loader
+    def unlike(self, user):
+        self.likes_sent.remove(user)
+
+    def love(self, user):
+        self.loves_sent.append(user)
+
+    def unlove(self, user):
+        self.loves_sent.remove(user)
+
+
+@ login.user_loader
 def load_user(id):
     return User.query.get(int(id))
-
-
-class Like(db.Model):
-
-    id = db.Column(db.Integer, primary_key=True)
-    liker_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
-    liked_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
-    is_platonic = db.Column(db.Boolean, default=False)
-    is_romantic = db.Column(db.Boolean, default=False)
-
-    def __repr__(self):
-        return '<Like: {} likes {}>'.format(self.liker_id, self.liked_id)

@@ -1,35 +1,38 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-    <head>
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-        {% if title %}
-        <title>{{ title }} - Dating App</title>
-        {% else %}
-        <title>Welcome to Dating App</title>
-        {% endif %}
-    </head>
-    <body>
-        <div>
-            Dating App:
-            <a href="{{ url_for('index') }}">Home</a>
-            {% if current_user.is_anonymous %}
-            <a href="{{ url_for('login') }}">Login</a>
-            {% else %}
-            <a href="{{ url_for('logout') }}">Logout</a>
-            <a href="{{ url_for('show_users') }}">Users</a>
-            <a href="{{ url_for('likes') }}">Likes</a>
-            {% endif %}
-        </div>
-        <hr>
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-        <ul>
-            {% for message in messages %}
-            <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        {% endwith %}
-        {% block content %}{% endblock %}
-    </body>
+  <head>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    {% if title %}
+    <title>{{ title }} - Dating App</title>
+    {% else %}
+    <title>Welcome to Dating App</title>
+    {% endif %}
+  </head>
+  <body>
+    <div>
+      Dating App:
+      <a href="{{ url_for('index') }}">Home</a>
+      {% if current_user.is_anonymous %}
+      <a href="{{ url_for('login') }}">Login</a>
+      {% else %}
+      <a href="{{ url_for('logout') }}">Logout</a>
+      <a href="{{ url_for('show_users') }}">Users</a>
+      <a href="{{ url_for('likes_and_loves_sent') }}">Likes/Loves Sent</a>
+      <a href="{{ url_for('likes_and_loves_received') }}"
+        >Likes/Loves Received</a
+      >
+      {% endif %}
+    </div>
+    <hr />
+    {% with messages = get_flashed_messages() %} {% if messages %}
+    <ul>
+      {% for message in messages %}
+      <li>{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %} {% endwith %} {% block content %}{% endblock %}
+  </body>
 </html>

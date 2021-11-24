@@ -1,6 +1,12 @@
-from app.models import User, Like
-from app import db
+from sqlalchemy.orm.scoping import scoped_session
+from app.models import User
+from app.db.setup import Base, SessionLocal, engine
 import csv
+
+session = scoped_session(SessionLocal)
+
+Base.metadata.create_all(engine)
+Base.query = session.query_property()
 
 
 def loadUsers():
@@ -11,11 +17,9 @@ def loadUsers():
             db_User = User(username=row["username"],
                            email=row["email"],
                            country=row["country"])
-            db_User.set_password(row['password_hash'])
-            db.session.add(db_User)
-        db.session.commit()
-
-    db.session.close()
+            db_User.set_password(row['password'])
+            session.add(db_User)
+        session.commit()
 
 
 def loadLikes():
@@ -24,29 +28,22 @@ def loadLikes():
 
         for row in csv_reader:
 
+            liker = User.query.filter(row["liker_id"] == User.id).first()
+            liked = User.query.filter(row["liked_id"] == User.id).first()
+
             if row["is_platonic"] == 'True':
-                is_platonic = True
-            else:
-                is_platonic = False
+                liker.like(liked)
 
             if row["is_romantic"] == 'True':
-                is_romantic = True
-            else:
-                is_romantic = False
+                liker.love(liked)
 
-            db_Like = Like(liker_id=row["liker_id"],
-                           liked_id=row["liked_id"],
-                           is_platonic=is_platonic,
-                           is_romantic=is_romantic)
-            db.session.add(db_Like)
-        db.session.commit()
-
-    db.session.close()
+            session.commit()
 
 
 def main():
-    # loadUsers()
+    loadUsers()
     loadLikes()
+    session.close()
 
 
 if __name__ == '__main__':

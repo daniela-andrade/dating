@@ -1,24 +1,22 @@
-{% extends 'base.html' %}
-
-{% block content %}
-{% for message in get_flashed_messages() %}
+{% extends 'base.html' %} {% block content %} {% for message in
+get_flashed_messages() %}
 <h2>{{ message }}</h2>
 {% endfor %}
-    <h1>{% block title %} Users {% endblock %}</h1>
-    <div>
-        <table>
-            <tr>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Country</th>
-            </tr>
-            {% for user in users %}
-            <tr>
-                <td>{{ user.username }}</td>
-                <td>{{ user.email }}</td>
-                <td>{{ user.country }}</td>
-            </tr>
-            {% endfor %}
-        </table> 
-    </div>
+<h1>{% block title %} Users {% endblock %}</h1>
+<div>
+  <table>
+    <tr>
+      <th>Username</th>
+      <th>Email</th>
+      <th>Country</th>
+    </tr>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.username }}</td>
+      <td>{{ user.email }}</td>
+      <td>{{ user.country }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
 {% endblock %}
