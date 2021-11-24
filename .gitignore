@@ -39,3 +39,4 @@ venv
 app.db
 dating.log*
 .vscode
+test.db
